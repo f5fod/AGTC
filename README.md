@@ -3,7 +3,7 @@
 
 ### Origin
 The story has begun with programs written in QB64.
-Look at < https://www.dg7ybn.de/Ant_soft/Antenna_GT_f5fod.htm> for further explanations and to get access to the corresponding .bas and .exe files.
+Look at <https://www.dg7ybn.de/Ant_soft/Antenna_GT_f5fod.htm> for further explanations and to get access to the corresponding .bas and .exe files.
 
 Now, in 2026, the *AGTC_anyGTa_2lite_V2-00.bas* is translated in the present *AGTC* html file!
 
