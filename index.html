@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AGTC-JS_V01-02</title>
+
+<style>
+body {
+  background: #111;
+  color: #ddd;
+  font-family: monospace;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid #555;
+  padding: 3px 6px;
+  text-align: right;
+}
+
+th {
+  color: #ff0;
+}
+
+.alpha30 {
+  color: red;
+  font-weight: bold;
+}
+
+.fatal, .warning {
+  color: red;
+  font-weight: bold;
+}
+
+/* ===== UI ===== */
+
+.temp-block {
+  display: grid;
+  grid-template-columns: 200px auto;
+  row-gap: 6px;
+  align-items: center;
+}
+
+.temp-block label {
+  white-space: nowrap;
+}
+
+.temp-field {
+  display: flex;
+  align-items: center;
+}
+
+.temp-field input {
+  width: 120px;
+}
+
+.temp-error {
+  color: red;
+  margin-left: 8px;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+.file-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+#fileInput {
+  display: none;
+}
+
+.file-label {
+  background: #333;
+  color: #ddd;
+  padding: 4px 10px;
+  border: 1px solid #777;
+  cursor: pointer;
+}
+
+.file-name {
+  font-style: italic;
+}
+</style>
+</head>
+
+<body>
+
+<h2>AGTC-JS_V01-02 – Antenna G/Ta Calculator, by F5FOD with DG7YBN</h2>
+
+<div class="temp-block">
+  <label for="Tsky">Sky temperature (K):</label>
+  <div class="temp-field">
+    <input type="text" id="Tsky" value="20"
+           oninput="validateTemperature(this)">
+    <span class="temp-error" id="err-Tsky"></span>
+  </div>
+
+  <label for="Tearth">Earth temperature (K):</label>
+  <div class="temp-field">
+    <input type="text" id="Tearth" value="350"
+           oninput="validateTemperature(this)">
+    <span class="temp-error" id="err-Tearth"></span>
+  </div>
+</div>
+
+<div class="file-wrapper">
+  <label for="fileInput" class="file-label">Browse</label>
+  <span id="fileName" class="file-name">No FFTab file selected</span>
+</div>
+
+<input type="file" id="fileInput">
+<br>
+
+<button onclick="run()">Run</button>
+
+<div id="output"></div>
+
+<script>
+/* =========================================================
+   AGTC – Antenna G/Ta Calculator
+
+   Original program:
+     Name     : AGTC_anyGTa_2lite_V2-00.bas
+     Language : QB64 32 bits
+     Authors  : F5FOD with DG7YBN
+
+   HTML / JavaScript port
+
+   Version : V01-02
+
+
+Version V01-02
+February 2026
+- L'écran de résultats est effacé dès la validation d'un nouveau Run
+
+Version V01-01
+February 2026
+- Loss Factor and Average Gain, including alert for Loss Factor < 1, Average Gain > 1
+- 6 digits for decimal part of Loss Factor and Average Gain
+- New headers
+
+Version V01-00
+February 2026
+   - Columns:
+      - Alpha
+      - T(subscript)A (ex-T_pattern): Noise temperature at the aperture of the antenna
+	  - T(subscript)loss            : Antenna Loss temperature due to its physical temperature, corrected for antenna ohmic Loss;
+                                      there are no longer "T_loss_IN nor T_loss_OUT
+      - T(subscript)total
+      - G/T(subscript)a
+   - Average Gain is replaced by Loss Factor L(subscript)a, with Loss Factor = 1 / (Average Gain)  
+ ========================================================= */
+
+document.getElementById("fileInput").addEventListener("change", function () {
+  document.getElementById("fileName").textContent =
+    this.files.length ? this.files[0].name : "No FFTab file selected";
+});
+
+/* ===== VALIDATION ===== */
+
+function validateTemperature(input) {
+
+  const err = document.getElementById("err-" + input.id);
+  const value = input.value;
+
+  if (value === "") {
+    err.textContent = "";
+    input.dataset.valid = "false";
+    return;
+  }
+
+  const ok = /^(0|[1-9]\d{0,6})$/.test(value);
+
+  if (!ok) {
+    err.textContent = "Temperatures must be integers [0 ; 9999999]";
+    input.dataset.valid = "false";
+  } else {
+    err.textContent = "";
+    input.dataset.valid = "true";
+  }
+}
+
+/* ===================== CONSTANTS ===================== */
+
+const ALPHA_STEP = 5;
+const ALPHA_MAX  = 90;
+const N_ALPHA    = ALPHA_MAX / ALPHA_STEP + 1;
+
+const PI = Math.PI;
+const EPS_DB = 1e-9;
+
+/* ===================== ARRAYS ===================== */
+
+const Tot_dB = new Float64Array(65341);
+const element = new Float64Array(65341);
+
+const sum = new Float64Array(361);
+const sum_Sky = new Float64Array(N_ALPHA);
+const sum_Earth = new Float64Array(N_ALPHA);
+
+const pattern_temperature = new Float64Array(N_ALPHA);
+const loss_temperature = new Float64Array(N_ALPHA);                    // For the new column T_loss
+const total_temperature = new Float64Array(N_ALPHA);
+const G_on_T_dB = new Float64Array(N_ALPHA);
+
+/* ===================== GLOBALS ===================== */
+
+let avg_gain_num = 0;
+let Tot_dB_max = -1e9;
+let phi_max = 0;
+let theta_max = 0;
+let Tot_dB_axis = null;
+let lastFFTabDataLine = null;
+
+/* ===================== MAIN ===================== */
+
+function run() {
+
+  const sky = document.getElementById("Tsky");
+  const earth = document.getElementById("Tearth");
+
+  if (sky.value === "" || earth.value === "") {
+    alert("Please enter both Sky and Earth temperatures (0 is allowed).");
+    return;
+  }
+
+  if (sky.dataset.valid !== "true" || earth.dataset.valid !== "true") {
+    alert("Temperature values are invalid.\nPlease correct them before running.");
+    return;
+  }
+
+  const file = document.getElementById("fileInput").files[0];
+  if (!file) {
+    alert("Please select FFTab file");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () =>
+    parseFFTab(reader.result, Number(sky.value), Number(earth.value));
+  reader.readAsText(file);
+}
+
+/* ===================== FFTAB PARSER ===================== */
+/* === Numerical code unchanged from v11/v12 === */
+
+function parseFFTab(text, Tsky, Tearth) {
+
+  const lines = text.split(/\r?\n/);
+
+  if (lines.length < 11) { fatalFFTabGeneric(); return; }
+
+  if (lines[10].trim().split(/\s+/)[0] !== "Azimuth") {
+    fatalFFTabGeneric(); return;
+  }
+
+  if (lines.length < 14) { fatalFFTabStep(); return; }
+
+  const az1 = parseInt(lines[12], 10);
+  const az2 = parseInt(lines[13], 10);
+
+  if (!Number.isFinite(az1) || !Number.isFinite(az2) || az2 - az1 !== 1) {
+    fatalFFTabStep(); return;
+  }
+
+  let i = 9;
+  Tot_dB_max = -1e9;
+  Tot_dB_axis = null;
+
+  for (let theta = 180; theta >= 0; theta--) {
+    i += 3;
+    for (let phi = 0; phi <= 360; phi++) {
+      const line = lines[i++] || "";
+      lastFFTabDataLine = line;
+      const dB = Number(line.substr(25, 10).trim().replace(",", "."));
+      const idx = 181 * phi + theta;
+      Tot_dB[idx] = dB;
+
+      if (phi === 0 && theta === 90) Tot_dB_axis = dB;
+      if (dB > Tot_dB_max) {
+        Tot_dB_max = dB;
+        phi_max = phi;
+        theta_max = theta;
+      }
+
+      element[idx] =
+        Math.pow(10, dB / 10) *
+        Math.sin(theta * PI / 180) *
+        Math.pow(PI / 180, 2);
+    }
+  }
+
+  if (parseInt(lastFFTabDataLine, 10) !== 360) {
+    fatalFFTabGeneric(); return;
+  }
+
+  if (Tot_dB_axis !== null &&
+      Math.abs(Tot_dB_axis - Tot_dB_max) < EPS_DB) {
+    theta_max = 90;
+  }
+
+  compute_avg_gain();
+  main_calculations(Tsky, Tearth);
+  display_results();
+}
+
+/* ===================== ERRORS ===================== */
+
+function fatalFFTabGeneric() {
+  document.getElementById("output").innerHTML =
+    `<p class="fatal">
+    The FF Table file is not in accordance with the right format.<br>
+    This may be due to:<br>
+    - a wrong number of lines and/or<br>
+    - a wrong content of lines and/or<br>
+    - a file not organized as Azimuth slices and/or<br>
+    - a last Azimuth value not equal to 360 degrees and/or<br>
+    - other reason(s)!<br><br>
+    Please select another FFTab file.
+    </p>`;
+}
+
+function fatalFFTabStep() {
+  document.getElementById("output").innerHTML =
+    `<p class="fatal">
+    The FF Table must be of 1 deg. resolution but is not!
+    <br><br>
+    Please select another FFTab file.
+    </p>`;
+}
+
+/* ===================== INTEGRATION ===================== */
+
+function trapezoidal_sums(bp, ep, bt, et) {
+  for (let phi = bp; phi <= ep; phi++) {
+    let s = 0;
+    for (let theta = bt + 1; theta <= et - 1; theta++) {
+      s += element[181 * phi + theta];
+    }
+    s += element[181 * phi + bt] / 2;
+    s += element[181 * phi + et] / 2;
+    sum[phi] = s;
+  }
+
+  let sum_sum = 0;
+  for (let phi = bp + 1; phi <= ep - 1; phi++) {
+    sum_sum += sum[phi];
+  }
+  sum_sum += (sum[bp] + sum[ep]) / 2;
+  return sum_sum;
+}
+
+/* ===================== AREAS ===================== */
+
+function areas(alpha, k) {
+  sum_Sky[k] =
+    trapezoidal_sums(0, 90, 0, 90 + alpha) +
+    trapezoidal_sums(270, 360, 0, 90 + alpha) +
+    trapezoidal_sums(90, 270, 0, 90 - alpha);
+
+  sum_Earth[k] =
+    trapezoidal_sums(0, 90, 90 + alpha, 180) +
+    trapezoidal_sums(270, 360, 90 + alpha, 180) +
+    trapezoidal_sums(90, 270, 90 - alpha, 180);
+}
+
+/* ===================== AVERAGE GAIN ===================== */
+
+function compute_avg_gain() {
+  areas(0, 0);
+  avg_gain_num = (sum_Sky[0] + sum_Earth[0]) / (4 * PI);
+}
+
+/* ===================== MAIN LOOP ===================== */
+
+function main_calculations(Tsky, Tearth) {
+  for (let k = 0; k < N_ALPHA; k++) {
+    const alpha = k * ALPHA_STEP;
+    areas(alpha, k);
+
+    const Tp =
+      (Tsky * sum_Sky[k] + Tearth * sum_Earth[k]) /
+      (sum_Sky[k] + sum_Earth[k]);
+	  
+	const Tl = 290 * (1 - avg_gain_num);                               // For the new column T_loss
+
+    const Tt = (Tp - 290) * avg_gain_num + 290;
+
+    pattern_temperature[k] = Tp;
+	loss_temperature[k] = Tl;                                          // For the new column T_loss
+    total_temperature[k] = Tt;
+
+    G_on_T_dB[k] =
+      (Tt <= 0) ? -99.999 : Tot_dB_max - 10 * Math.log10(Tt);
+  }
+}
+
+/* ===================== DISPLAY ===================== */
+
+function display_results() {
+
+  let html = `<p>
+    Max gain = ${Tot_dB_max.toFixed(2)} dBi
+    (az=${phi_max}°, el=${90 - theta_max}°)
+  </p>`;
+
+  if (avg_gain_num > 1) {
+    html += `<p class="warning">
+      Computed Loss Factor (L<sub>a</sub>) < 1, Average Gain > 1 => G/T<sub>A</sub> correction needed
+    </p>`;
+  } else {
+    html += `<p>&nbsp;</p>`;
+  }
+
+  html += `<p>
+    Loss Factor (L<sub>a</sub>) = ${(1 / avg_gain_num).toFixed(6)} (/), Average Gain = ${(avg_gain_num).toFixed(6)} (/)
+  </p>`;
+
+  html += `<table>
+    <tr>
+      <th>α (deg)</th>
+      <th>T<sub>a</sub> (K)</th>                               <!-- Instead of T_pattern -->
+	  <th>T<sub>a,loss</sub> (K)</th>                          <!-- New column T_a,loss -->
+      <th>T<sub>A</sub> (K)</th>                               <!-- Instead of T_total -->
+      <th>G/T<sub>A</sub> (dB)</th>                            <!-- Instead of G/Ta -->
+    </tr>`;
+
+  for (let k = 0; k < N_ALPHA; k++) {
+    const alpha = k * ALPHA_STEP;
+    const cls = (alpha === 30) ? "alpha30" : "";
+    html += `<tr class="${cls}">
+      <td>${alpha}</td>
+      <td>${pattern_temperature[k].toFixed(3)}</td>
+	  <td>${loss_temperature[k].toFixed(3)}</td>                <!-- New column T_loss -->
+      <td>${total_temperature[k].toFixed(3)}</td>
+      <td>${G_on_T_dB[k].toFixed(3)}</td>
+    </tr>`;
+  }
+
+  html += `</table>`;
+  document.getElementById("output").innerHTML = html;
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  validateTemperature(document.getElementById("Tsky"));
+  validateTemperature(document.getElementById("Tearth"));
+
+  // Clear output when a new FFTab file is selected
+  document.getElementById("fileInput").addEventListener("change", () => {
+    document.getElementById("output").innerHTML = "";
+  });
+});
+
+
+</script>
+
+</body>
+</html>
