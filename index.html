@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>AGTC-JS_V01-02</title>
+<title>AGTC-JS_V01-03</title>
 
 <style>
 body {
@@ -91,7 +91,7 @@ th {
 
 <body>
 
-<h2>AGTC-JS_V01-02 – Antenna G/Ta Calculator, by F5FOD with DG7YBN</h2>
+<h2>AGTC-JS_V01-03 – Antenna G/Ta Calculator, by F5FOD with DG7YBN</h2>
 
 <div class="temp-block">
   <label for="Tsky">Sky temperature (K):</label>
@@ -132,29 +132,33 @@ th {
 
    HTML / JavaScript port
 
-   Version : V01-02
+   Version : V01-03
 
+
+Version V01-03
+February 2026
+- Version comments translated in english.
 
 Version V01-02
 February 2026
-- L'écran de résultats est effacé dès la validation d'un nouveau Run
+- The results screen is cleared as soon as a new Run is validated.
 
 Version V01-01
 February 2026
-- Loss Factor and Average Gain, including alert for Loss Factor < 1, Average Gain > 1
-- 6 digits for decimal part of Loss Factor and Average Gain
-- New headers
+- Loss Factor and Average Gain, including alert for Loss Factor < 1, Average Gain > 1.
+- 6 digits for decimal part of Loss Factor and Average Gain.
+- New headers.
 
 Version V01-00
 February 2026
    - Columns:
-      - Alpha
-      - T(subscript)A (ex-T_pattern): Noise temperature at the aperture of the antenna
+      - Alpha,
+      - T(subscript)A (ex-T_pattern): Noise temperature at the aperture of the antenna,
 	  - T(subscript)loss            : Antenna Loss temperature due to its physical temperature, corrected for antenna ohmic Loss;
-                                      there are no longer "T_loss_IN nor T_loss_OUT
-      - T(subscript)total
-      - G/T(subscript)a
-   - Average Gain is replaced by Loss Factor L(subscript)a, with Loss Factor = 1 / (Average Gain)  
+                                      there are no longer "T_loss_IN nor T_loss_OUT,
+      - T(subscript)total,
+      - G/T(subscript)a.
+   - Average Gain is replaced by Loss Factor L(subscript)a, with Loss Factor = 1 / (Average Gain). 
  ========================================================= */
 
 document.getElementById("fileInput").addEventListener("change", function () {
