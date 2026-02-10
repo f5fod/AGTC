@@ -1,15 +1,15 @@
-# AGTC
+# AGTC-JS
 ## Antenna G/T Calculator
 
 ### Origin
 The story has begun with programs written in QB64.
 Look at <https://www.dg7ybn.de/Ant_soft/Antenna_GT_f5fod.htm> for further explanations and to get access to the corresponding .bas and .exe files.
 
-Now, in 2026, the *AGTC_anyGTa_2lite_V2-00.bas* is translated in the present *AGTC* html file!
+Now, in 2026, the *AGTC_anyGTa_2lite_V2-00.bas* is translated in the present *AGTC-JS* html file!
 
-### How to use this *AGTC* html file
+### How to use this *AGTC-JS* html file
 First of all, create a FFTab (Far Field Table) file with EZNEC or 4nec2.
-Next use this html *AGTC* file which will calculate the G/T ratio of your antenna.
+Next use this html *AGTC-JS* file which will calculate the G/T ratio of your antenna.
 
 ### Reference articles, written by F5FOD with DG7YBN
 
