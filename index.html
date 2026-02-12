@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>AGTC-JS_V01-03</title>
+<title>AGTC-JS_V01-04</title>
 
 <style>
 body {
@@ -91,7 +91,7 @@ th {
 
 <body>
 
-<h2>AGTC-JS_V01-03 – Antenna G/Ta Calculator, by F5FOD with DG7YBN</h2>
+<h2>AGTC-JS_V01-04 – Antenna G/T<sub>A</sub> Calculator, by F5FOD with DG7YBN</h2>
 
 <div class="temp-block">
   <label for="Tsky">Sky temperature (K):</label>
@@ -129,11 +129,19 @@ th {
      Name     : AGTC_anyGTa_2lite_V2-00.bas
      Language : QB64 32 bits
      Authors  : F5FOD with DG7YBN
-
+     https://www.dg7ybn.de/Ant_soft/Antenna_GT_f5fod.htm
+	 
    HTML / JavaScript port
 
-   Version : V01-03
+   Version : V01-04
 
+
+Version V01-04
+February 2026
+- No G/T(subscript)A display when T(susbcript)A <= 0 (instead of displaying 99.999).
+- No longer alert(xxxx) with pop-ups for T_sky, T_Earth or FFTab file entering but standard red alert messages.
+- DG7YBN URL added.
+- T(subscript)A in the title.
 
 Version V01-03
 February 2026
@@ -209,7 +217,7 @@ const sum_Sky = new Float64Array(N_ALPHA);
 const sum_Earth = new Float64Array(N_ALPHA);
 
 const pattern_temperature = new Float64Array(N_ALPHA);
-const loss_temperature = new Float64Array(N_ALPHA);                    // For the new column T_loss
+const loss_temperature = new Float64Array(N_ALPHA);                         // For the new column T_loss
 const total_temperature = new Float64Array(N_ALPHA);
 const G_on_T_dB = new Float64Array(N_ALPHA);
 
@@ -228,20 +236,29 @@ function run() {
 
   const sky = document.getElementById("Tsky");
   const earth = document.getElementById("Tearth");
-
-  if (sky.value === "" || earth.value === "") {
-    alert("Please enter both Sky and Earth temperatures (0 is allowed).");
+  
+  if (sky.value === "" || earth.value === "") {                              // Instead of alert pop-up.
+    document.getElementById("output").innerHTML =
+      `<p class="warning">
+        Please enter both Sky and Earth temperatures (0 is allowed).
+       </p>`;
     return;
   }
 
-  if (sky.dataset.valid !== "true" || earth.dataset.valid !== "true") {
-    alert("Temperature values are invalid.\nPlease correct them before running.");
+  if (sky.dataset.valid !== "true" || earth.dataset.valid !== "true") {      // Instead of alert pop-up.
+    document.getElementById("output").innerHTML =
+      `<p class="warning">
+        Invalid Temperature value(s).<br>
+        Please enter valid value(s) before running.
+       </p>`;
     return;
   }
 
   const file = document.getElementById("fileInput").files[0];
-  if (!file) {
-    alert("Please select FFTab file");
+  
+  if (!file) {                                                               // Instead of alert pop-up.
+    document.getElementById("output").innerHTML =
+      `<p class="warning">Please select FFTab file</p>`;
     return;
   }
 
@@ -400,8 +417,12 @@ function main_calculations(Tsky, Tearth) {
 	loss_temperature[k] = Tl;                                          // For the new column T_loss
     total_temperature[k] = Tt;
 
-    G_on_T_dB[k] =
-      (Tt <= 0) ? -99.999 : Tot_dB_max - 10 * Math.log10(Tt);
+    if (Tt > 0) {                                                      // For the case Tt <= 0
+      G_on_T_dB[k] = Tot_dB_max - 10 * Math.log10(Tt);
+    } else {
+      G_on_T_dB[k] = NaN;
+    }
+
   }
 }
 
@@ -441,9 +462,9 @@ function display_results() {
     html += `<tr class="${cls}">
       <td>${alpha}</td>
       <td>${pattern_temperature[k].toFixed(3)}</td>
-	  <td>${loss_temperature[k].toFixed(3)}</td>                <!-- New column T_loss -->
+	  <td>${loss_temperature[k].toFixed(3)}</td>                              <!-- New column T_loss -->
       <td>${total_temperature[k].toFixed(3)}</td>
-      <td>${G_on_T_dB[k].toFixed(3)}</td>
+	  <td>${Number.isNaN(G_on_T_dB[k]) ? "" : G_on_T_dB[k].toFixed(3)}</td>   <!-- For the case Tt <= 0 -->
     </tr>`;
   }
 
