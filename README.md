@@ -12,6 +12,12 @@ Now, in 2026, the *AGTC_anyGTa_2lite_V2-00.bas* is translated in the present *AG
 First of all, create a FFTab (Far Field Table) file with EZNEC or 4nec2.
 Next use this html *AGTC-JS* file which will calculate the G/T ratio of your antenna.
 
+### Authors
+F5FOD with DG7YBN
+
+### License CC BY-NC 4.0
+This license CC BY-NC enables reusers to distribute, remix, adapt, and build upon the material in any medium or format for noncommercial purposes only, and only so long as attribution is given to the creator. Full text in the LICENSE file.
+
 ### Reference articles, written by F5FOD with DG7YBN
 
 **Part 1:** An Antenna G/T calculator (*AGTC_lite*) without mathematical rotation calculations, DUBUS, 1/2017
