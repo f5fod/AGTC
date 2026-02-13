@@ -15,7 +15,7 @@ Next use this html *AGTC-JS* file which will calculate the G/T ratio of your ant
 ### Authors
 F5FOD with DG7YBN
 
-### License CC BY-NC 4.0
+### License Creative Commons BY-NC 4.0
 This license CC BY-NC enables reusers to distribute, remix, adapt, and build upon the material in any medium or format for noncommercial purposes only, and only so long as attribution is given to the creator. Full text in the LICENSE file.
 
 ### Reference articles, written by F5FOD with DG7YBN
