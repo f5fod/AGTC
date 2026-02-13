@@ -6,7 +6,7 @@ The story has begun with programs written in QB64.
 Look at <https://www.dg7ybn.de/Ant_soft/Antenna_GT_f5fod.htm> for further explanations and to get access to the corresponding .bas and .exe files.<br>
 Or you may prefer to get all the relevant information here: <https://github.com/f5fod/AGTC-QB64>.
 
-Now, in 2026, the *AGTC_anyGTa_2lite_V2-00.bas* is translated in the present *AGTC-JS* html file!
+In 2026, the *AGTC_anyGTa_2lite_V2-00.bas* has been translated in the present *AGTC-JS* html file!
 
 ### How to use this *AGTC-JS* html file
 First of all, create a FFTab (Far Field Table) file with EZNEC or 4nec2.
